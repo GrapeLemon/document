@@ -42,8 +42,24 @@ PointFeeBusinessService
 
 ```java
 //这个方法有bug
-sumLowOutbandMinCount
+// sumLowOutbandMinCount
 //这行代码的取的值为空了 很显然，在前面并没有统计执行低消的数量
- lowConsumpCount += value.getLowconsump_count();
+// lowConsumpCount += value.getLowconsump_count();
+
+```
+
+
+
+# 2019/07/15
+
+```java
+ExtensionExportTask
+	init
+		JSONArray.parseArray
+//现在假定是输入有误，解决方案是把修改输入
+
+这个类型就是源头了 处理一下
+PointExtensionDetailService
+	export
 ```
 

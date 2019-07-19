@@ -21,4 +21,18 @@
 
 ​	从字节流中恢复对象的状态
 
-​	
+
+
+# 三个核心类
+
+## JSON
+
+​	工具类，负责解析和转换
+
+JSONObject
+
+​	在JAVA使用JSON对象
+
+JSONArray
+
+​	在JAVA使用JOSN数组

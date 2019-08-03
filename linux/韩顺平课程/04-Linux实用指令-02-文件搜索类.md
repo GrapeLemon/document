@@ -111,3 +111,4 @@ locate hello.txt	#这个指令真的好用啊
 ​	如果是配合管道玩的话，那就是不需要写源文件了，内容由管道前面的输入提供
 
 ​	cat hello.txt | grep -n yes
+

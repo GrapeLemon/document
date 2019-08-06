@@ -171,6 +171,10 @@ return (BeanFactory)registry;
 
 @Component说是要配合的 classpath-scanning来做（也就是在XML中加一些东西），但是在SpringBoot中应该是不需要了，需要注意的是单单使用spring还是要写XML的。
 
+这里我觉得还是不能忽略掉，毕竟这涉及到了 classpath的概念
+
+![1565059874474](D:\我的文档\JAVA\框架\Spring解密\images\类路径扫描)
+
 # BeanFactory的XML之旅
 
 ## 1. < beans >  之唯我独尊

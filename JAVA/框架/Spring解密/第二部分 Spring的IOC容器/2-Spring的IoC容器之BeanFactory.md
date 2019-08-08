@@ -907,3 +907,78 @@ Spring框架提供了一个BeanFactoryAware接口，容器在实例化实现了�
 #### 2.使用 ObjectFactoryCreatingFactoryBean
 
 ObjectFactoryCreatingFactoryBean 是 Spring提供的一个 FactoryBean实现，它 返 回 一 个ObjectFactory实例。从ObjectFactoryCreatingFactoryBean返回的这个ObjectFactory实例可以为 我 们 返 回 容 器 管 理 的 相 关 对 象 。 实 际 上 ， ObjectFactoryCreatingFactoryBean 实 现 了BeanFactoryAware接口，它返回的ObjectFactory实例只是特定于与Spring容器进行交互的一个实现而已。使用它的好处就是，隔离了客户端对象对BeanFactory的直接引用。 
+
+![1565265610618](D:\我的文档\JAVA\框架\Spring解密\images\讲道理好奇怪)
+
+![1565265809811](D:\我的文档\JAVA\框架\Spring解密\images\类名长到想吐)
+
+![1565265868802](D:\我的文档\JAVA\框架\Spring解密\images\错综复杂)
+
+![1565265965405](D:\我的文档\JAVA\框架\Spring解密\images\难懂)
+
+### 3. 方法替换
+
+​	与方法注入只是通过相应方法为主体对象注入依赖对象不同，方法替换更多体现在方法的实现层面上，它可以灵活替换或者说以新的方法实现覆盖掉原来某个方法的实现逻辑。基本上可以认为，方法替换可以帮助我们实现简单的方法拦截功能。要知道，我们现在可是在不知不觉中迈上了AOP的大道哦！
+
+假设某天我看FXNewsProvider不爽，想替换掉它的getAndPersistNews方法默认逻辑，这时，我就可以用方法替换将它的原有逻辑给替换掉。 
+
+@@小心@@ 这里只是为了演示方法替换（ Method Replacement）的功能，不要真的这么做。要使用
+也要用在好的地方，对吧？ 假设我们只是简单记录日志，打印简单信息，那么就可以给出一个类似代码清单4-39所示的MethodReplacer实现类。 
+
+![1565266277181](D:\我的文档\JAVA\框架\Spring解密\images\方法替换)
+
+有了要替换的逻辑之后，我们就可以把这个逻辑通过<replaced-method>配置到FXNewsProvider的bean定义中，使其生效，配置内容如代码清单4-40所示。 	
+
+![1565266394684](D:\我的文档\JAVA\框架\Spring解密\images\又丑又长的配置文件)
+
+![1565266605610](D:\我的文档\JAVA\框架\Spring解密\images\输出)
+
+最后需要强调的是，这种方式刚引入的时候执行效率不是很高，当你充分了解并应用SpringAOP之后，我想你也不会再回头求助这个特色功能。不过，怎么说这也是一个选择，场景合适的话，为何不用呢？ 哦，如果要替换的方法存在参数，或者对象存在多个重载的方法，可以在<replaced-method>内部通过<arg-type>明确指定将要替换的方法参数类型。祝“替换”愉快！  恶心的一。。
+
+
+
+## 4.容器背后的秘密
+
+子曰：学而不思则罔。除了了解Spring的IoC容器如何使用，了解Spring的IoC容器都提供了哪些功能，我们也应该想一下， Spring的IoC容器内部到底是如何来实现这些的呢？虽然我们不太可能“重新发明轮子”，但是，如图4-7（该图摘自Spring官方参考文档）所示的那样，只告诉你“Magic HappensHere”，你是否就能心满意足呢？ 
+
+![1565266777311](D:\我的文档\JAVA\框架\Spring解密\images\好一个magic)
+
+好，如果你的答案是“不”（我当然认为你说的是“不想一直被蒙在鼓里”），那么就随我一起来探索一下这个“黑匣子”里面到底有些什么……
+
+Spring的IoC容器所起的作用，就像图4-7所展示的那样，它会以某种方式加载ConfigurationMetadata（通常也就是XML格式的配置信息），然后根据这些信息绑定整个系统的对象，最终组装成一个可用的基于轻量级容器的应用系统 。
+
+Spring的IoC容器实现以上功能的过程，基本上可以按照类似的流程划分为两个阶段，即**容器启动阶段**和**Bean实例化阶段**，如图4-8所示。 
+
+Spring的IoC容器在实现的时候，充分运用了这两个实现阶段的不同特点，在每个阶段都加入了相应的容器扩展点，以便我们可以根据具体场景的需要加入自定义的扩展逻辑。
+
+![1565266967114](D:\我的文档\JAVA\框架\Spring解密\images\两个阶段)
+
+### 4.1容器启动阶段
+
+容器启动伊始，首先会通过某种途径加载Configuration MetaData。除了代码方式比较直接，在大部分情况下，容器需要依赖某些工具类（BeanDefinitionReader）对加载的Configuration MetaData 进行解析和分析，并将分析后的信息编组为相应的BeanDefinition，最后把这些保存了bean定义必要信息的BeanDefinition，注册到相应的BeanDefinitionRegistry，这样容器启动工作就完成了。图4-9演示了这个阶段的主要工作。 
+
+![1565267136127](D:\我的文档\JAVA\框架\Spring解密\images\容器启动)
+
+总地来说，该阶段所做的工作可以认为是准备性，重点更加侧重于对象管理信息的收集。当然，一些验证性或者辅助性的工作也可以在这个阶段完成。
+
+### 4.2 Bean的实例化过程
+
+​	经过第一阶段，现在所有的bean定义信息都通过 BeanDefinition的方式注册到了BeanDefinitionRegistry中。当某个请求方通过容器的getBean方法明确地请求某个对象，或者因依赖关系容器需要隐式地调用getBean方法时，就会触发第二阶段的活动。
+
+该阶段，容器会首先检查所请求的对象之前是否已经初始化。如果没有，则会根据如果没有，则会根据注册的BeanDefinition所提供的信息实例化被请求对象，并为其注入依赖。如果该对象实现了某些回调接口，也会根据回调接口的要求来装配它。当该对象装配完毕之后，容器会立即将其返回请求方使用。如果说第一阶段只是根据图纸装配生产线的话，那么第二阶段就是使用装配好的生产线来生产具体的产品了。 
+
+#### 4.2.2插手容器的启动
+
+Spring提供了一种叫做BeanFactoryPostProcessor的容器扩展机制。该机制允许我们在容器实例化相应对象之前，对注册到容器的BeanDefinition所保存的信息做相应的修改。这就相当于在容器实现的第一阶段最后加入一道工序，让我们对最终的BeanDefinition做一些额外的操作，比如修改其中bean定义的某些属性，为bean定义增加其他信息等。 
+
+如果要自定义实现BeanFactoryPostProcessor，通常我们需要实现org.springframework.beans.factory.config.BeanFactoryPostProcessor接口。同时，因为一个容器可能拥有多个BeanFactoryPostProcessor，这个时候可能需要实现类同时实现Spring的org.springframework.core.Ordered接口，以保证各个BeanFactoryPostProcessor可以按照预先设定的顺序执行（如果顺序紧要的话）。但是，因为Spring已经提供了几个现成的BeanFactoryPostProcessor实现类，所以，大多时候，我们很少自己去实现某个BeanFactoryPostProcessor。其中，org.springframework.beans.factory.config.PropertyPlaceholderConfigurer和org.springframework.beans.factory.
+config.Property OverrideConfigurer是两个比较常用的BeanFactoryPostProcessor
+
+另外，为了处理配置文件中的数据类型与真正的业务对象所定义的数据类型转换， Spring还允许我们通过
+org.springframework.beans.factory.config.CustomEditorConfigurer来注册自定义的PropertyEditor以补助容器中默认的PropertyEditor。可以参考BeanFactoryPostProcessor的Javadoc来了解更多其实现子类的情况。 
+
+我 们 可 以 通 过 两 种 方 式 来 应 用 BeanFactoryPostProcessor ， 分 别 针 对 基 本 的 IoC 容 器BeanFactory和较为先进的容器ApplicationContext。 
+
+对于BeanFactory来说，我们需要用手动方式应用所有的BeanFactoryPostProcessor，代码清单4-41演示了具体的做法。 
+
+![1565269125814](D:\我的文档\JAVA\框架\Spring解密\images\最后一步)

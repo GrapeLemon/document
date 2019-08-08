@@ -851,3 +851,59 @@ private DateTime dateOfNextDay;
 ```
 
 看到了吗？NextDayDateDisplayer所声明的依赖dateOfNextDay的类型为DateTime，而不是 NextDayDateFactoryBean。也就是说 FactoryBean类型的bean定义，通过正常的id引用，容器返回的是 FactoryBean所“生产”的对象类型，而非 FactoryBean本身。
+
+如果一定要取得FactoryBean本身的话，可以通过在bean定义的id之前加前缀 & 来达到目的。代码清单4-34展示了获取FactoryBean本身与获取FactoryBean“生产”的对象之间的差别。 
+
+![1565187930994](D:\我的文档\JAVA\框架\Spring解密\images\factoryBean)
+
+## 7.偷梁换柱之术
+
+​	在学习以下内容之前，先提一下有关bean的scope的使用“陷阱”，特别是 prototype在容器中的使用，以此引出本节将要介绍的Spring容器较为独特的功能特性：方法注入(Method Injection) 以及方法替换 (Method Replacement)。
+
+我们知道，拥有prototype类型scope的bean，在请求方每次向容器请求该类型对象的时候，容器都会返回一个全新的该对象的实例。为了简化问题的叙述，我们直接将 FXNews系统中的 FXNewsBean定义注册到容器中，并将其scope设置为prototype。因为它是有状态的类型，每条新闻都应该是新的独立个体：同时，我们给出MockNewsPersister 类，使其实现 IFXNewsPersister 接口，以模拟注入 FXNewsBean 实例后的情况。这样，我们就有了代码4-35所展示的类声明和相关配置 。
+
+![1565189061953](D:\我的文档\JAVA\框架\Spring解密\images\code)
+
+![1565189077603](D:\我的文档\JAVA\框架\Spring解密\images\凑得)
+
+![1565189826932](D:\我的文档\JAVA\框架\Spring解密\images\一厢情愿)
+
+从输出看，对象实例是相同的，而这与我们的初衷是相悖的。因为每次调用persistNews都会调用getNewsBean()方法并返回一个FXNewsBean实例，而FXNewsBean实例是prototype类型的，因此每次不是应该输出不同的对象实例嘛？ 
+
+好了，问题实际上不是出在FXNewsBean的scope类型是否是prototype的，而是出在实例的取得方式上面。虽然FXNewsBean拥有prototype类型的scope，但当容器将一个FXNewsBean的实例注入MockNewsPersister之后， MockNewsPersister就会一直持有这个FXNewsBean实例的引用。虽然每次输出都调用了getNewsBean()方法并返回了 FXNewsBean 的实例，但实际上每次返回的都是MockNewsPersister持有的容器第一次注入的实例。这就是问题之所在。换句话说，第一个实例注入后， MockNewsPersister再也没有重新向容器申请新的实例。所以，容器也不会重新为其注入新的FXNewsBean类型的实例。 
+
+### 1.  方法注入
+
+​	Spring容器提出了一种叫做方法注入（Method Injection）的方式，可以帮助我们解决上述问题。我们所要做的很简单，只要让 getNewsBean 方法声明符合规定的格式，并在配置文件中通知容器，当该方法被调用的时候，每次返回指定类型的对象实例即可。方法声明需要符合规定定义如下：
+
+![1565190065634](D:\我的文档\JAVA\框架\Spring解密\images\抽象了点)
+
+也就是说，该方法必须能够被子类实现或者覆写，因为容器会为我们要进行方法注入的对象使用Cglib 动态生成一个子类实现，从而替代当前对象。既然我们的 getNewsBean() 方法已经满足以上方法声明格式，剩下唯一要做的就是配置该类，配置内容如下：
+
+![1565190264788](D:\我的文档\JAVA\框架\Spring解密\images\奇奇怪怪)
+
+![1565190392340](D:\我的文档\JAVA\框架\Spring解密\images\一脸懵逼)
+
+![1565190535061](D:\我的文档\JAVA\框架\Spring解密\images\注意)
+
+### 2.殊途同归
+
+除了使用方法注入来达到“每次调用都让容器返回新的对象实例”的目的，还可以使用其他方式达到相同的目的。下面给出其他两种解决类似问题的方法，供读者参考。 
+
+#### 1.使用BeanFactoryAware接口 
+
+我们知道，即使没有方法注入， 只要在实现getNewsBean()方法的时候，能够保证每次调用BeanFactory的getBean("newsBean")，就同样可以每次都取得新的FXNewsBean对象实例。现在，我们唯一需要的，就是让MockNewsPersister拥有一个BeanFactory的引用 。
+
+Spring框架提供了一个BeanFactoryAware接口，容器在实例化实现了该接口的bean定义的过程中，会自动将容器本身注入该bean。这样， 该bean就持有了它所处的BeanFactory的引用。BeanFactoryAware的定义如下代码所示： 
+
+![1565190932712](D:\我的文档\JAVA\框架\Spring解密\images\try)
+
+![1565190949299](D:\我的文档\JAVA\框架\Spring解密\images\class)
+
+![1565190999397](D:\我的文档\JAVA\框架\Spring解密\images\修)
+
+实际上，方法注入动态生成的子类，完成的是与以上类似的逻辑，只不过实现细节上不同而已 
+
+#### 2.使用 ObjectFactoryCreatingFactoryBean
+
+ObjectFactoryCreatingFactoryBean 是 Spring提供的一个 FactoryBean实现，它 返 回 一 个ObjectFactory实例。从ObjectFactoryCreatingFactoryBean返回的这个ObjectFactory实例可以为 我 们 返 回 容 器 管 理 的 相 关 对 象 。 实 际 上 ， ObjectFactoryCreatingFactoryBean 实 现 了BeanFactoryAware接口，它返回的ObjectFactory实例只是特定于与Spring容器进行交互的一个实现而已。使用它的好处就是，隔离了客户端对象对BeanFactory的直接引用。 

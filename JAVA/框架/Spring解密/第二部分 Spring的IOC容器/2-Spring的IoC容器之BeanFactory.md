@@ -66,26 +66,22 @@ String[] getAliases(String name);
 ![1564816409149](D:\我的文档\JAVA\框架\Spring解密\images\BeanFactory用的配置文件)
 
 ```java
-拉响启航的汽笛。在BeanFactory出现之前，我们通常会直接在应用程序的入口类的main方法中，
-自己实例化相应的对象并调用之，如以下代码所示： 11
+//拉响启航的汽笛。在BeanFactory出现之前，我们通常会直接在应用程序的入口类的main方法中，
+//自己实例化相应的对象并调用之，如以下代码所示： 
 FXNewsProvider newsProvider = new FXNewsProvider();
-newsProvider.getAndPersistNews(); 12
+newsProvider.getAndPersistNews(); 
 不过，现在既然有了BeanFactory，我们通常只需将“生产线图纸”交给BeanFactory，让
 BeanFactory为我们生产一个FXNewsProvider，如以下代码所示： 13
-14
-BeanFactory container = ➥
-new XmlBeanFactory(new ClassPathResource("配置文件路径"));
+
+BeanFactory container = new XmlBeanFactory(new ClassPathResource("配置文件路径"));
 FXNewsProvider newsProvider = (FXNewsProvider)container.getBean("djNewsProvider");
 newsProvider.getAndPersistNews();
-或者如以下代码所示：
-15
-ApplicationContext container = ➥
-new ClassPathXmlApplicationContext("配置文件路径");
+//或者如以下代码所示：
+ApplicationContext container = new ClassPathXmlApplicationContext("配置文件路径");
 FXNewsProvider newsProvider = (FXNewsProvider)container.getBean("djNewsProvider");
-newsProvider.getAndPersistNews(); 16
-亦或如以下代码所示：
-ApplicationContext container = ➥ 1724 Spring 的 IoC 容器
-new FileSystemXmlApplicationContext("配置文件路径");
+newsProvider.getAndPersistNews(); 
+//亦或如以下代码所示：
+ApplicationContext container = new FileSystemXmlApplicationContext("配置文件路径");
 FXNewsProvider newsProvider = (FXNewsProvider)container.getBean("djNewsProvider");
 newsProvider.getAndPersistNews();
 这就是拥有BeanFactory后的生活。当然，这只是使用BeanFactory后开发流程的一个概览而已，
@@ -109,23 +105,19 @@ BeanFactory只是一个接口。我们最终需要一个该接口的实现来进
 **每一个受管的对象，在容器中都会有一个BeanDefinition的实例(instance)相对应，该BeanDefinition实例负责保存对象的所有必要信息，包括其对应的对象的class类型、是否是抽象类、构造方法参数以及其他属性等，当客户端向BeanFactory请求相应对象的时候，BeanFactory会通过这些信息为客户端返回一个完备可用的对象实例**RootBeanDefinition和 ChildBeanDefinition是BeanDefinition的两个主要实现类。 
 
 ```java
-代码清单4-4 通过编码方式使用BeanFactory实现FX新闻相关类的注册及绑定
+//代码清单4-4 通过编码方式使用BeanFactory实现FX新闻相关类的注册及绑定
 public static void main(String[] args)
 {
 DefaultListableBeanFactory beanRegistry = new DefaultListableBeanFactory();
 BeanFactory container = (BeanFactory)bindViaCode(beanRegistry);
-FXNewsProvider newsProvider = ➥
-(FXNewsProvider)container.getBean("djNewsProvider");
+FXNewsProvider newsProvider = (FXNewsProvider)container.getBean("djNewsProvider");
 newsProvider.getAndPersistNews();
 }
 public static BeanFactory bindViaCode(BeanDefinitionRegistry registry)
 {
-AbstractBeanDefinition newsProvider = ➥
-new RootBeanDefinition(FXNewsProvider.class,true);
-AbstractBeanDefinition newsListener = ➥
-new RootBeanDefinition(DowJonesNewsListener.class,true);
-AbstractBeanDefinition newsPersister = ➥
-new RootBeanDefinition(DowJonesNewsPersister.class,true);
+AbstractBeanDefinition newsProvider = new RootBeanDefinition(FXNewsProvider.class,true);
+AbstractBeanDefinition newsListener = new RootBeanDefinition(DowJonesNewsListener.class,true);
+AbstractBeanDefinition newsPersister = new RootBeanDefinition(DowJonesNewsPersister.class,true);
 // 将bean定义注册到容器中
 registry.registerBeanDefinition("djNewsProvider", newsProvider);
 registry.registerBeanDefinition("djListener", newsListener);
@@ -137,23 +129,25 @@ argValues.addIndexedArgumentValue(0, newsListener);
 argValues.addIndexedArgumentValue(1, newsPersister);
 newsProvider.setConstructorArgumentValues(argValues);
 // 2. 或者通过setter方法注入方式
-① 在Spring的术语中，把BeanFactory需要使用的对象注册和依赖绑定信息称为Configuration Metadata。我们这里所
-展示的，实际上就是组织这些Configuration Metadata的各种方式。因此这个标题才这么长。4.2 TBeanFactoryT 的对象注册与依赖绑定方式 F F 25
+//在Spring的术语中，把BeanFactory需要使用的对象注册和依赖绑定信息称为Configuration Metadata。我们这里所
+//展示的，实际上就是组织这些Configuration Metadata的各种方式。因此这个标题才这么长。
 MutablePropertyValues propertyValues = new MutablePropertyValues();
-propertyValues.addPropertyValue(new ropertyValue("newsListener",newsListener));
+propertyValues.addPropertyValue(new PropertyValue("newsListener",newsListener));
 propertyValues.addPropertyValue(new PropertyValue("newPersistener",newsPersister));
 newsProvider.setPropertyValues(propertyValues);
 // 绑定完成 2
-return (BeanFactory)registry;
+return (BeanFactory)registry;	//看了下源代码感觉有问题..这样能拿到bean吗
+//这样写确实是没问题的，面向接口编程，但是具体的实现类里面又（间接）实现了BeanFactory这个接口，所以是可以实现互转的
+    
 ```
 
 关于代码的解释很精彩 信手拈来。
 
 ## 外部配置文件方式
 
-意也可以引入自己的文件格式，前提是真的需要。 Spring的IoC容器支持两种配置文件格式：Properties文件格式和XML文件格式。当然，也可以引入自己的文件格式，前提是真的需要。
+你也可以引入自己的文件格式，前提是真的需要。 Spring的IoC容器支持两种配置文件格式：Properties文件格式和XML文件格式。当然，也可以引入自己的文件格式，前提是真的需要。
 
-采用外部配置文件时，Spring的IoC容易有一个统一的处理方式。通常情况下，需要根据不同的外部配置文件格式，给出相应的BeanDefinitionReader的实现类，由BeanDefinitionReader的相应实现类负责将相应的配置文件内容读取并映射到BeanDefinition，然后将映射后的BeanDefinition注册到一个BeanDefinitionRegistry中，之后，BeanDefinitionRegistry即完成Bean的注册和加载。
+采用外部配置文件时，Spring的IoC容易有一个统一的处理方式。通常情况下，需要根据不同的外部配置文件格式，给出相应的BeanDefinitionReader的实现类，由BeanDefinitionReader的相应实现类负责将相应的配置文件内容读取并映射到BeanDefinition，然后将映射后的BeanDefinition注册到一个BeanDefinitionRegistry中，之后，BeanDefinitionRegistry即完成Bean的**注册和加载**。
 
 ​	
 
@@ -169,7 +163,7 @@ return (BeanFactory)registry;
 
 @AutoWired是这里的主角，它的存在将告知Sring容器需要为当前对象注入哪些依赖对象
 
-@Component说是要配合的 classpath-scanning来做（也就是在XML中加一些东西），但是在SpringBoot中应该是不需要了，需要注意的是单单使用spring还是要写XML的。
+@Component说是要配合的 **classpath-scanning**来做（也就是在XML中加一些东西），但是在SpringBoot中应该是不需要了，需要注意的是单单使用spring还是要写XML的。
 
 这里我觉得还是不能忽略掉，毕竟这涉及到了 classpath的概念
 
